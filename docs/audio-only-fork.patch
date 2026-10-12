@@ -1,0 +1,437 @@
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index 9f5d403..0b3c94e 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -39,8 +39,10 @@ configure<ApplicationExtension> {
+     namespace = NEWPIPE_APPLICATION_ID_OLD
+ 
+     defaultConfig {
+-        applicationId = NEWPIPE_APPLICATION_ID_OLD
+-        resValue("string", "app_name", "NewPipe")
++        // AUDIO-ONLY FORK: use a different application id so that this fork can be installed
++        // next to the upstream NewPipe app.
++        applicationId = "org.schabi.newpipe.audio"
++        resValue("string", "app_name", "NewPipe Audio")
+         minSdk {
+             version = release(NEWPIPE_VERSION_SDK_MIN)
+         }
+@@ -63,10 +65,10 @@ configure<ApplicationExtension> {
+             // suffix the app id and the app name with git branch name
+             if (normalizedWorkingBranch.isEmpty() || workingBranch in defaultBranches) {
+                 applicationIdSuffix = ".debug"
+-                resValue("string", "app_name", "NewPipe Debug")
++                resValue("string", "app_name", "NewPipe Audio")
+             } else {
+                 applicationIdSuffix = ".debug.$normalizedWorkingBranch"
+-                resValue("string", "app_name", "NewPipe $workingBranch")
++                resValue("string", "app_name", "NewPipe Audio $workingBranch")
+             }
+         }
+ 
+@@ -90,8 +92,7 @@ configure<ApplicationExtension> {
+ 
+             // suffix the app id and the app name with git branch name
+             if (normalizedWorkingBranch.isEmpty() || workingBranch in defaultBranches) {
+-                applicationIdSuffix = ".continuous"
+-                resValue("string", "app_name", "NewPipe Continuous")
++                resValue("string", "app_name", "NewPipe Audio")
+             } else {
+                 applicationIdSuffix = ".continuous.$normalizedWorkingBranch"
+                 resValue("string", "app_name", "NewPipe $workingBranch")
+diff --git a/app/src/main/java/org/schabi/newpipe/RouterActivity.java b/app/src/main/java/org/schabi/newpipe/RouterActivity.java
+index 2997f93..8c86d45 100644
+--- a/app/src/main/java/org/schabi/newpipe/RouterActivity.java
++++ b/app/src/main/java/org/schabi/newpipe/RouterActivity.java
+@@ -676,16 +676,17 @@ public class RouterActivity extends AppCompatActivity {
+             return false;
+         }
+ 
++        // AUDIO-ONLY FORK: the video player is gone, check the external audio player instead.
+         final boolean isExtVideoEnabled = PreferenceManager.getDefaultSharedPreferences(this)
+-                .getBoolean(getString(R.string.use_external_video_player_key), false);
++                .getBoolean(getString(R.string.use_external_audio_player_key), false);
+         // ...it's not done via an external player
+         if (isExtVideoEnabled) {
+             return false;
+         }
+ 
+-        // ...the player is not running or in normal Video-mode/type
++        // ...the player is not running or already using the background (audio) player
+         final PlayerType playerType = PlayerHolder.getInstance().getType();
+-        return playerType == null || playerType == PlayerType.MAIN;
++        return playerType == null || playerType == PlayerType.AUDIO;
+     }
+ 
+     public static class PersistentFragment extends Fragment {
+diff --git a/app/src/main/java/org/schabi/newpipe/download/DownloadDialog.java b/app/src/main/java/org/schabi/newpipe/download/DownloadDialog.java
+index 178fcef..6cea106 100644
+--- a/app/src/main/java/org/schabi/newpipe/download/DownloadDialog.java
++++ b/app/src/main/java/org/schabi/newpipe/download/DownloadDialog.java
+@@ -646,42 +646,20 @@ public class DownloadDialog extends DialogFragment
+         setRadioButtonsState(false);
+         setupAudioTrackSpinner();
+ 
+-        final boolean isVideoStreamsAvailable = videoStreamsAdapter.getCount() > 0;
+         final boolean isAudioStreamsAvailable = audioStreamsAdapter.getCount() > 0;
+-        final boolean isSubtitleStreamsAvailable = subtitleStreamsAdapter.getCount() > 0;
+ 
++        // AUDIO-ONLY FORK: video and subtitle downloads are not offered anymore, this dialog
++        // only allows downloading audio streams.
+         dialogBinding.audioButton.setVisibility(isAudioStreamsAvailable ? View.VISIBLE
+                 : View.GONE);
+-        dialogBinding.videoButton.setVisibility(isVideoStreamsAvailable ? View.VISIBLE
+-                : View.GONE);
+-        dialogBinding.subtitleButton.setVisibility(isSubtitleStreamsAvailable
+-                ? View.VISIBLE : View.GONE);
++        dialogBinding.videoButton.setVisibility(View.GONE);
++        dialogBinding.subtitleButton.setVisibility(View.GONE);
+ 
+         prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
+-        final String defaultMedia = prefs.getString(getString(R.string.last_used_download_type),
+-                getString(R.string.last_download_type_video_key));
+ 
+-        if (isVideoStreamsAvailable
+-                && (defaultMedia.equals(getString(R.string.last_download_type_video_key)))) {
+-            dialogBinding.videoButton.setChecked(true);
+-            setupVideoSpinner();
+-        } else if (isAudioStreamsAvailable
+-                && (defaultMedia.equals(getString(R.string.last_download_type_audio_key)))) {
++        if (isAudioStreamsAvailable) {
+             dialogBinding.audioButton.setChecked(true);
+             setupAudioSpinner();
+-        } else if (isSubtitleStreamsAvailable
+-                && (defaultMedia.equals(getString(R.string.last_download_type_subtitle_key)))) {
+-            dialogBinding.subtitleButton.setChecked(true);
+-            setupSubtitleSpinner();
+-        } else if (isVideoStreamsAvailable) {
+-            dialogBinding.videoButton.setChecked(true);
+-            setupVideoSpinner();
+-        } else if (isAudioStreamsAvailable) {
+-            dialogBinding.audioButton.setChecked(true);
+-            setupAudioSpinner();
+-        } else if (isSubtitleStreamsAvailable) {
+-            dialogBinding.subtitleButton.setChecked(true);
+-            setupSubtitleSpinner();
+         } else {
+             Toast.makeText(getContext(), R.string.no_streams_available_download,
+                     Toast.LENGTH_SHORT).show();
+diff --git a/app/src/main/java/org/schabi/newpipe/fragments/detail/VideoDetailFragment.java b/app/src/main/java/org/schabi/newpipe/fragments/detail/VideoDetailFragment.java
+index 4780f75..e2e0c26 100644
+--- a/app/src/main/java/org/schabi/newpipe/fragments/detail/VideoDetailFragment.java
++++ b/app/src/main/java/org/schabi/newpipe/fragments/detail/VideoDetailFragment.java
+@@ -1126,11 +1126,12 @@ public final class VideoDetailFragment
+             onScreenRotationButtonClicked();
+         }
+ 
+-        if (PreferenceManager.getDefaultSharedPreferences(activity)
+-                .getBoolean(this.getString(R.string.use_external_video_player_key), false)) {
+-            showExternalVideoPlaybackDialog();
++        // AUDIO-ONLY FORK: there is no in-app video player anymore. If the user configured an
++        // external audio player, use it; otherwise start the background (audio) player.
++        if (isExternalPlayerEnabled()) {
++            showExternalAudioPlaybackDialog();
+         } else {
+-            replaceQueueIfUserConfirms(this::openMainPlayer);
++            openNormalBackgroundPlayer(false);
+         }
+     }
+ 
+@@ -1262,7 +1263,7 @@ public final class VideoDetailFragment
+ 
+     private boolean isExternalPlayerEnabled() {
+         return PreferenceManager.getDefaultSharedPreferences(requireContext())
+-                .getBoolean(getString(R.string.use_external_video_player_key), false);
++                .getBoolean(getString(R.string.use_external_audio_player_key), false);
+     }
+ 
+     // This method overrides default behaviour when setAutoPlay() is called.
+@@ -1270,7 +1271,8 @@ public final class VideoDetailFragment
+     private boolean isAutoplayEnabled() {
+         return autoPlayEnabled
+                 && !isExternalPlayerEnabled()
+-                && (!isPlayerAvailable() || player.videoPlayerSelected())
++                // AUDIO-ONLY FORK: also allow autoplay when the background (audio) player is used.
++                && (!isPlayerAvailable() || player.audioPlayerSelected())
+                 && bottomSheetState != BottomSheetBehavior.STATE_HIDDEN
+                 && PlayerHelper.isAutoplayAllowedByUser(requireContext());
+     }
+diff --git a/app/src/main/java/org/schabi/newpipe/player/Player.java b/app/src/main/java/org/schabi/newpipe/player/Player.java
+index b5b2228..c1658d4 100644
+--- a/app/src/main/java/org/schabi/newpipe/player/Player.java
++++ b/app/src/main/java/org/schabi/newpipe/player/Player.java
+@@ -359,6 +359,10 @@ public final class Player implements PlaybackListener, Listener {
+         if (playerIntentType != PlayerIntentType.TimestampChange) {
+             playerType = IntentCompat.getSerializableExtra(intent, PLAYER_TYPE, PlayerType.class);
+         }
++        // AUDIO-ONLY FORK: always play with the background (audio) player. This makes the video
++        // player, the popup player and picture-in-picture unreachable, and it is the only player
++        // type which fully disables the video renderer.
++        playerType = PlayerType.AUDIO;
+         initUIsForCurrentPlayerType();
+         isAudioOnly = audioPlayerSelected();
+ 
+@@ -2014,27 +2018,11 @@ public final class Player implements PlaybackListener, Listener {
+     @Override // own playback listener
+     @Nullable
+     public MediaSource sourceOf(final PlayQueueItem item, final StreamInfo info) {
+-        if (audioPlayerSelected()) {
+-            return audioResolver.resolve(info);
+-        }
+-
+-        if (isAudioOnly && videoResolver.getStreamSourceType().orElse(
+-                SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY)
+-                == SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY) {
+-            // If the current info has only video streams with audio and if the stream is played as
+-            // audio, we need to use the audio resolver, otherwise the video stream will be played
+-            // in background.
+-            return audioResolver.resolve(info);
+-        }
+-
+-        // Even if the stream is played in background, we need to use the video resolver if the
+-        // info played is separated video-only and audio-only streams; otherwise, if the audio
+-        // resolver was called when the app was in background, the app will only stream audio when
+-        // the user come back to the app and will never fetch the video stream.
+-        // Note that the video is not fetched when the app is in background because the video
+-        // renderer is fully disabled (see useVideoAndSubtitles method), except for HLS streams
+-        // (see https://github.com/google/ExoPlayer/issues/9282).
+-        return videoResolver.resolve(info);
++        // AUDIO-ONLY FORK: always resolve an audio-only media source. The audio resolver only
++        // builds a source from the extracted audio streams (it falls back to a muxed stream only
++        // if a service provides no separate audio streams at all, e.g. some live streams), so no
++        // video-only stream is ever downloaded or decoded.
++        return audioResolver.resolve(info);
+     }
+ 
+     public void disablePreloadingOfCurrentTrack() {
+diff --git a/app/src/main/java/org/schabi/newpipe/util/NavigationHelper.java b/app/src/main/java/org/schabi/newpipe/util/NavigationHelper.java
+index fa51056..79c5110 100644
+--- a/app/src/main/java/org/schabi/newpipe/util/NavigationHelper.java
++++ b/app/src/main/java/org/schabi/newpipe/util/NavigationHelper.java
+@@ -97,7 +97,8 @@ public final class NavigationHelper {
+                 .orElse(null);
+         return new Intent(context, targetClazz)
+                 .putExtra(Player.PLAY_QUEUE_KEY, cacheKey)
+-                .putExtra(Player.PLAYER_TYPE, PlayerType.MAIN)
++                // AUDIO-ONLY FORK: the background (audio) player is the only player.
++                .putExtra(Player.PLAYER_TYPE, PlayerType.AUDIO)
+                 .putExtra(PlayerService.SHOULD_START_FOREGROUND_EXTRA, true)
+                 .putExtra(Player.PLAYER_INTENT_TYPE, playerIntentType);
+     }
+@@ -144,17 +145,9 @@ public final class NavigationHelper {
+     public static void playOnPopupPlayer(final Context context,
+                                          final PlayQueue queue,
+                                          final boolean resumePlayback) {
+-        if (!PermissionHelper.isPopupEnabledElseAsk(context)) {
+-            return;
+-        }
+-
+-        Toast.makeText(context, R.string.popup_playing_toast, Toast.LENGTH_SHORT).show();
+-
+-        final var intent = getPlayerIntent(context, PlayerService.class, queue,
+-                PlayerIntentType.AllOthers)
+-                .putExtra(Player.PLAYER_TYPE, PlayerType.POPUP)
+-                .putExtra(Player.RESUME_PLAYBACK, resumePlayback);
+-        ContextCompat.startForegroundService(context, intent);
++        // AUDIO-ONLY FORK: the popup player does not exist anymore, fall back to the background
++        // (audio) player so that existing callers keep working.
++        playOnBackgroundPlayer(context, queue, resumePlayback);
+     }
+ 
+     public static void playOnBackgroundPlayer(final Context context,
+@@ -174,10 +167,7 @@ public final class NavigationHelper {
+     public static void enqueueOnPlayer(final Context context,
+                                        final PlayQueue queue,
+                                        final PlayerType playerType) {
+-        if (playerType == PlayerType.POPUP && !PermissionHelper.isPopupEnabledElseAsk(context)) {
+-            return;
+-        }
+-
++        // AUDIO-ONLY FORK: always enqueue on the background (audio) player.
+         Toast.makeText(context, R.string.enqueued, Toast.LENGTH_SHORT).show();
+ 
+         // when enqueueing `resumePlayback` is always `false` since:
+@@ -190,7 +180,7 @@ public final class NavigationHelper {
+         final Intent intent = getPlayerIntent(context, PlayerService.class, queue,
+                 PlayerIntentType.Enqueue)
+                 .putExtra(Player.RESUME_PLAYBACK, false)
+-                .putExtra(Player.PLAYER_TYPE, playerType);
++                .putExtra(Player.PLAYER_TYPE, PlayerType.AUDIO);
+         ContextCompat.startForegroundService(context, intent);
+     }
+ 
+diff --git a/app/src/main/java/org/schabi/newpipe/util/PlayButtonHelper.kt b/app/src/main/java/org/schabi/newpipe/util/PlayButtonHelper.kt
+index 40734ec..4e08fb7 100644
+--- a/app/src/main/java/org/schabi/newpipe/util/PlayButtonHelper.kt
++++ b/app/src/main/java/org/schabi/newpipe/util/PlayButtonHelper.kt
+@@ -42,7 +42,8 @@ object PlayButtonHelper {
+             showHoldToAppendToastIfNeeded(activity)
+         }
+         playlistControlBinding.playlistCtrlPlayPopupButton.setOnClickListener {
+-            NavigationHelper.playOnPopupPlayer(activity, fragment.getPlayQueue(), false)
++            // AUDIO-ONLY FORK: no popup player, use the background player instead.
++            NavigationHelper.playOnBackgroundPlayer(activity, fragment.getPlayQueue(), false)
+             showHoldToAppendToastIfNeeded(activity)
+         }
+         playlistControlBinding.playlistCtrlPlayBgButton.setOnClickListener {
+@@ -52,11 +53,11 @@ object PlayButtonHelper {
+ 
+         // long click listener
+         playlistControlBinding.playlistCtrlPlayAllButton.setOnLongClickListener {
+-            NavigationHelper.enqueueOnPlayer(activity, fragment.getPlayQueue(), PlayerType.MAIN)
++            NavigationHelper.enqueueOnPlayer(activity, fragment.getPlayQueue(), PlayerType.AUDIO)
+             true
+         }
+         playlistControlBinding.playlistCtrlPlayPopupButton.setOnLongClickListener {
+-            NavigationHelper.enqueueOnPlayer(activity, fragment.getPlayQueue(), PlayerType.POPUP)
++            NavigationHelper.enqueueOnPlayer(activity, fragment.getPlayQueue(), PlayerType.AUDIO)
+             true
+         }
+         playlistControlBinding.playlistCtrlPlayBgButton.setOnLongClickListener {
+diff --git a/app/src/main/res/xml/video_audio_settings.xml b/app/src/main/res/xml/video_audio_settings.xml
+index 6e8e297..4a721c9 100644
+--- a/app/src/main/res/xml/video_audio_settings.xml
++++ b/app/src/main/res/xml/video_audio_settings.xml
+@@ -1,28 +1,14 @@
+ <?xml version="1.0" encoding="utf-8"?>
++<!--
++  Audio-only fork: all video related preferences (default video resolution, popup resolution,
++  higher resolutions, video format, external video player, start in fullscreen, popup size/pos,
++  video gestures and seek bar thumbnail previews) have been removed. Only audio and general
++  playback preferences remain.
++-->
+ <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+     xmlns:app="http://schemas.android.com/apk/res-auto"
+     android:title="@string/settings_category_video_audio_title">
+ 
+-    <ListPreference
+-        android:defaultValue="@string/default_resolution_value"
+-        android:entries="@array/resolution_list_description"
+-        android:entryValues="@array/resolution_list_values"
+-        android:key="@string/default_resolution_key"
+-        android:title="@string/default_resolution_title"
+-        app:singleLineTitle="false"
+-        app:iconSpaceReserved="false"
+-        app:useSimpleSummaryProvider="true" />
+-
+-    <ListPreference
+-        android:defaultValue="@string/default_popup_resolution_value"
+-        android:entries="@array/resolution_list_description"
+-        android:entryValues="@array/resolution_list_values"
+-        android:key="@string/default_popup_resolution_key"
+-        android:title="@string/default_popup_resolution_title"
+-        app:singleLineTitle="false"
+-        app:iconSpaceReserved="false"
+-        app:useSimpleSummaryProvider="true" />
+-
+     <ListPreference
+         android:defaultValue="@string/limit_mobile_data_usage_value"
+         android:entries="@array/limit_data_usage_description_list"
+@@ -33,24 +19,6 @@
+         app:iconSpaceReserved="false"
+         app:useSimpleSummaryProvider="true" />
+ 
+-    <SwitchPreferenceCompat
+-        android:defaultValue="false"
+-        android:key="@string/show_higher_resolutions_key"
+-        android:summary="@string/show_higher_resolutions_summary"
+-        android:title="@string/show_higher_resolutions_title"
+-        app:singleLineTitle="false"
+-        app:iconSpaceReserved="false" />
+-
+-    <ListPreference
+-        android:defaultValue="@string/default_video_format_value"
+-        android:entries="@array/video_format_description_list"
+-        android:entryValues="@array/video_format_values_list"
+-        android:key="@string/default_video_format_key"
+-        android:title="@string/default_video_format_title"
+-        app:singleLineTitle="false"
+-        app:iconSpaceReserved="false"
+-        app:useSimpleSummaryProvider="true" />
+-
+     <ListPreference
+         android:defaultValue="@string/default_audio_format_value"
+         android:entries="@array/audio_format_description_list"
+@@ -91,14 +59,6 @@
+         app:singleLineTitle="false"
+         app:iconSpaceReserved="false">
+ 
+-        <SwitchPreferenceCompat
+-            android:defaultValue="false"
+-            android:key="@string/use_external_video_player_key"
+-            android:summary="@string/use_external_video_player_summary"
+-            android:title="@string/use_external_video_player_title"
+-            app:singleLineTitle="false"
+-            app:iconSpaceReserved="false" />
+-
+         <SwitchPreferenceCompat
+             android:defaultValue="false"
+             android:key="@string/use_external_audio_player_key"
+@@ -114,18 +74,6 @@
+             app:singleLineTitle="false"
+             app:iconSpaceReserved="false" />
+ 
+-        <ListPreference
+-            android:layout_width="wrap_content"
+-            android:layout_height="wrap_content"
+-            android:defaultValue="seekbar_preview_thumbnail_high_quality"
+-            android:entries="@array/seekbar_preview_thumbnail_type_description"
+-            android:entryValues="@array/seekbar_preview_thumbnail_type_key"
+-            android:key="@string/seekbar_preview_thumbnail_key"
+-            android:title="@string/seekbar_preview_thumbnail_title"
+-            app:singleLineTitle="false"
+-            app:iconSpaceReserved="false"
+-            app:useSimpleSummaryProvider="true" />
+-
+     </PreferenceCategory>
+ 
+     <PreferenceCategory
+@@ -154,14 +102,6 @@
+             app:singleLineTitle="false"
+             app:iconSpaceReserved="false" />
+ 
+-        <SwitchPreferenceCompat
+-            android:defaultValue="false"
+-            android:key="@string/start_main_player_fullscreen_key"
+-            android:summary="@string/start_main_player_fullscreen_summary"
+-            android:title="@string/start_main_player_fullscreen_title"
+-            app:singleLineTitle="false"
+-            app:iconSpaceReserved="false" />
+-
+         <ListPreference
+             android:defaultValue="@string/autoplay_value"
+             android:entries="@array/autoplay_type_description"
+@@ -188,34 +128,6 @@
+             app:singleLineTitle="false"
+             app:iconSpaceReserved="false" />
+ 
+-        <ListPreference
+-            android:defaultValue="@string/default_left_gesture_control_value"
+-            android:entries="@array/left_gesture_control_description"
+-            android:entryValues="@array/left_gesture_control_values"
+-            android:key="@string/left_gesture_control_key"
+-            android:summary="@string/left_gesture_control_summary"
+-            android:title="@string/left_gesture_control_title"
+-            app:singleLineTitle="false"
+-            app:iconSpaceReserved="false" />
+-
+-        <ListPreference
+-            android:defaultValue="@string/default_right_gesture_control_value"
+-            android:entries="@array/right_gesture_control_description"
+-            android:entryValues="@array/right_gesture_control_values"
+-            android:key="@string/right_gesture_control_key"
+-            android:summary="@string/right_gesture_control_summary"
+-            android:title="@string/right_gesture_control_title"
+-            app:singleLineTitle="false"
+-            app:iconSpaceReserved="false" />
+-
+-        <SwitchPreferenceCompat
+-            android:defaultValue="true"
+-            android:key="@string/popup_remember_size_pos_key"
+-            android:summary="@string/popup_remember_size_pos_summary"
+-            android:title="@string/popup_remember_size_pos_title"
+-            app:singleLineTitle="false"
+-            app:iconSpaceReserved="false" />
+-
+         <SwitchPreferenceCompat
+             android:defaultValue="false"
+             android:key="@string/use_inexact_seek_key"
