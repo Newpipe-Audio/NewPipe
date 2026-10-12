@@ -676,16 +676,17 @@ public class RouterActivity extends AppCompatActivity {
             return false;
         }
 
+        // AUDIO-ONLY FORK: the video player is gone, check the external audio player instead.
         final boolean isExtVideoEnabled = PreferenceManager.getDefaultSharedPreferences(this)
-                .getBoolean(getString(R.string.use_external_video_player_key), false);
+                .getBoolean(getString(R.string.use_external_audio_player_key), false);
         // ...it's not done via an external player
         if (isExtVideoEnabled) {
             return false;
         }
 
-        // ...the player is not running or in normal Video-mode/type
+        // ...the player is not running or already using the background (audio) player
         final PlayerType playerType = PlayerHolder.getInstance().getType();
-        return playerType == null || playerType == PlayerType.MAIN;
+        return playerType == null || playerType == PlayerType.AUDIO;
     }
 
     public static class PersistentFragment extends Fragment {

@@ -97,7 +97,8 @@ public final class NavigationHelper {
                 .orElse(null);
         return new Intent(context, targetClazz)
                 .putExtra(Player.PLAY_QUEUE_KEY, cacheKey)
-                .putExtra(Player.PLAYER_TYPE, PlayerType.MAIN)
+                // AUDIO-ONLY FORK: the background (audio) player is the only player.
+                .putExtra(Player.PLAYER_TYPE, PlayerType.AUDIO)
                 .putExtra(PlayerService.SHOULD_START_FOREGROUND_EXTRA, true)
                 .putExtra(Player.PLAYER_INTENT_TYPE, playerIntentType);
     }
@@ -144,17 +145,9 @@ public final class NavigationHelper {
     public static void playOnPopupPlayer(final Context context,
                                          final PlayQueue queue,
                                          final boolean resumePlayback) {
-        if (!PermissionHelper.isPopupEnabledElseAsk(context)) {
-            return;
-        }
-
-        Toast.makeText(context, R.string.popup_playing_toast, Toast.LENGTH_SHORT).show();
-
-        final var intent = getPlayerIntent(context, PlayerService.class, queue,
-                PlayerIntentType.AllOthers)
-                .putExtra(Player.PLAYER_TYPE, PlayerType.POPUP)
-                .putExtra(Player.RESUME_PLAYBACK, resumePlayback);
-        ContextCompat.startForegroundService(context, intent);
+        // AUDIO-ONLY FORK: the popup player does not exist anymore, fall back to the background
+        // (audio) player so that existing callers keep working.
+        playOnBackgroundPlayer(context, queue, resumePlayback);
     }
 
     public static void playOnBackgroundPlayer(final Context context,
@@ -174,10 +167,7 @@ public final class NavigationHelper {
     public static void enqueueOnPlayer(final Context context,
                                        final PlayQueue queue,
                                        final PlayerType playerType) {
-        if (playerType == PlayerType.POPUP && !PermissionHelper.isPopupEnabledElseAsk(context)) {
-            return;
-        }
-
+        // AUDIO-ONLY FORK: always enqueue on the background (audio) player.
         Toast.makeText(context, R.string.enqueued, Toast.LENGTH_SHORT).show();
 
         // when enqueueing `resumePlayback` is always `false` since:
@@ -190,7 +180,7 @@ public final class NavigationHelper {
         final Intent intent = getPlayerIntent(context, PlayerService.class, queue,
                 PlayerIntentType.Enqueue)
                 .putExtra(Player.RESUME_PLAYBACK, false)
-                .putExtra(Player.PLAYER_TYPE, playerType);
+                .putExtra(Player.PLAYER_TYPE, PlayerType.AUDIO);
         ContextCompat.startForegroundService(context, intent);
     }
 

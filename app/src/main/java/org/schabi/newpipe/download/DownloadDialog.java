@@ -646,42 +646,20 @@ public class DownloadDialog extends DialogFragment
         setRadioButtonsState(false);
         setupAudioTrackSpinner();
 
-        final boolean isVideoStreamsAvailable = videoStreamsAdapter.getCount() > 0;
         final boolean isAudioStreamsAvailable = audioStreamsAdapter.getCount() > 0;
-        final boolean isSubtitleStreamsAvailable = subtitleStreamsAdapter.getCount() > 0;
 
+        // AUDIO-ONLY FORK: video and subtitle downloads are not offered anymore, this dialog
+        // only allows downloading audio streams.
         dialogBinding.audioButton.setVisibility(isAudioStreamsAvailable ? View.VISIBLE
                 : View.GONE);
-        dialogBinding.videoButton.setVisibility(isVideoStreamsAvailable ? View.VISIBLE
-                : View.GONE);
-        dialogBinding.subtitleButton.setVisibility(isSubtitleStreamsAvailable
-                ? View.VISIBLE : View.GONE);
+        dialogBinding.videoButton.setVisibility(View.GONE);
+        dialogBinding.subtitleButton.setVisibility(View.GONE);
 
         prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
-        final String defaultMedia = prefs.getString(getString(R.string.last_used_download_type),
-                getString(R.string.last_download_type_video_key));
 
-        if (isVideoStreamsAvailable
-                && (defaultMedia.equals(getString(R.string.last_download_type_video_key)))) {
-            dialogBinding.videoButton.setChecked(true);
-            setupVideoSpinner();
-        } else if (isAudioStreamsAvailable
-                && (defaultMedia.equals(getString(R.string.last_download_type_audio_key)))) {
+        if (isAudioStreamsAvailable) {
             dialogBinding.audioButton.setChecked(true);
             setupAudioSpinner();
-        } else if (isSubtitleStreamsAvailable
-                && (defaultMedia.equals(getString(R.string.last_download_type_subtitle_key)))) {
-            dialogBinding.subtitleButton.setChecked(true);
-            setupSubtitleSpinner();
-        } else if (isVideoStreamsAvailable) {
-            dialogBinding.videoButton.setChecked(true);
-            setupVideoSpinner();
-        } else if (isAudioStreamsAvailable) {
-            dialogBinding.audioButton.setChecked(true);
-            setupAudioSpinner();
-        } else if (isSubtitleStreamsAvailable) {
-            dialogBinding.subtitleButton.setChecked(true);
-            setupSubtitleSpinner();
         } else {
             Toast.makeText(getContext(), R.string.no_streams_available_download,
                     Toast.LENGTH_SHORT).show();

@@ -359,6 +359,10 @@ public final class Player implements PlaybackListener, Listener {
         if (playerIntentType != PlayerIntentType.TimestampChange) {
             playerType = IntentCompat.getSerializableExtra(intent, PLAYER_TYPE, PlayerType.class);
         }
+        // AUDIO-ONLY FORK: always play with the background (audio) player. This makes the video
+        // player, the popup player and picture-in-picture unreachable, and it is the only player
+        // type which fully disables the video renderer.
+        playerType = PlayerType.AUDIO;
         initUIsForCurrentPlayerType();
         isAudioOnly = audioPlayerSelected();
 
@@ -2014,27 +2018,11 @@ public final class Player implements PlaybackListener, Listener {
     @Override // own playback listener
     @Nullable
     public MediaSource sourceOf(final PlayQueueItem item, final StreamInfo info) {
-        if (audioPlayerSelected()) {
-            return audioResolver.resolve(info);
-        }
-
-        if (isAudioOnly && videoResolver.getStreamSourceType().orElse(
-                SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY)
-                == SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY) {
-            // If the current info has only video streams with audio and if the stream is played as
-            // audio, we need to use the audio resolver, otherwise the video stream will be played
-            // in background.
-            return audioResolver.resolve(info);
-        }
-
-        // Even if the stream is played in background, we need to use the video resolver if the
-        // info played is separated video-only and audio-only streams; otherwise, if the audio
-        // resolver was called when the app was in background, the app will only stream audio when
-        // the user come back to the app and will never fetch the video stream.
-        // Note that the video is not fetched when the app is in background because the video
-        // renderer is fully disabled (see useVideoAndSubtitles method), except for HLS streams
-        // (see https://github.com/google/ExoPlayer/issues/9282).
-        return videoResolver.resolve(info);
+        // AUDIO-ONLY FORK: always resolve an audio-only media source. The audio resolver only
+        // builds a source from the extracted audio streams (it falls back to a muxed stream only
+        // if a service provides no separate audio streams at all, e.g. some live streams), so no
+        // video-only stream is ever downloaded or decoded.
+        return audioResolver.resolve(info);
     }
 
     public void disablePreloadingOfCurrentTrack() {

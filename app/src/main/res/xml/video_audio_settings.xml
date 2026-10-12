@@ -1,27 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Audio-only fork: all video related preferences (default video resolution, popup resolution,
+  higher resolutions, video format, external video player, start in fullscreen, popup size/pos,
+  video gestures and seek bar thumbnail previews) have been removed. Only audio and general
+  playback preferences remain.
+-->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:title="@string/settings_category_video_audio_title">
-
-    <ListPreference
-        android:defaultValue="@string/default_resolution_value"
-        android:entries="@array/resolution_list_description"
-        android:entryValues="@array/resolution_list_values"
-        android:key="@string/default_resolution_key"
-        android:title="@string/default_resolution_title"
-        app:singleLineTitle="false"
-        app:iconSpaceReserved="false"
-        app:useSimpleSummaryProvider="true" />
-
-    <ListPreference
-        android:defaultValue="@string/default_popup_resolution_value"
-        android:entries="@array/resolution_list_description"
-        android:entryValues="@array/resolution_list_values"
-        android:key="@string/default_popup_resolution_key"
-        android:title="@string/default_popup_resolution_title"
-        app:singleLineTitle="false"
-        app:iconSpaceReserved="false"
-        app:useSimpleSummaryProvider="true" />
 
     <ListPreference
         android:defaultValue="@string/limit_mobile_data_usage_value"
@@ -29,24 +15,6 @@
         android:entryValues="@array/limit_data_usage_values_list"
         android:key="@string/limit_mobile_data_usage_key"
         android:title="@string/limit_mobile_data_usage_title"
-        app:singleLineTitle="false"
-        app:iconSpaceReserved="false"
-        app:useSimpleSummaryProvider="true" />
-
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="@string/show_higher_resolutions_key"
-        android:summary="@string/show_higher_resolutions_summary"
-        android:title="@string/show_higher_resolutions_title"
-        app:singleLineTitle="false"
-        app:iconSpaceReserved="false" />
-
-    <ListPreference
-        android:defaultValue="@string/default_video_format_value"
-        android:entries="@array/video_format_description_list"
-        android:entryValues="@array/video_format_values_list"
-        android:key="@string/default_video_format_key"
-        android:title="@string/default_video_format_title"
         app:singleLineTitle="false"
         app:iconSpaceReserved="false"
         app:useSimpleSummaryProvider="true" />
@@ -93,14 +61,6 @@
 
         <SwitchPreferenceCompat
             android:defaultValue="false"
-            android:key="@string/use_external_video_player_key"
-            android:summary="@string/use_external_video_player_summary"
-            android:title="@string/use_external_video_player_title"
-            app:singleLineTitle="false"
-            app:iconSpaceReserved="false" />
-
-        <SwitchPreferenceCompat
-            android:defaultValue="false"
             android:key="@string/use_external_audio_player_key"
             android:title="@string/use_external_audio_player_title"
             app:singleLineTitle="false"
@@ -113,18 +73,6 @@
             android:title="@string/show_play_with_kodi_title"
             app:singleLineTitle="false"
             app:iconSpaceReserved="false" />
-
-        <ListPreference
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:defaultValue="seekbar_preview_thumbnail_high_quality"
-            android:entries="@array/seekbar_preview_thumbnail_type_description"
-            android:entryValues="@array/seekbar_preview_thumbnail_type_key"
-            android:key="@string/seekbar_preview_thumbnail_key"
-            android:title="@string/seekbar_preview_thumbnail_title"
-            app:singleLineTitle="false"
-            app:iconSpaceReserved="false"
-            app:useSimpleSummaryProvider="true" />
 
     </PreferenceCategory>
 
@@ -154,14 +102,6 @@
             app:singleLineTitle="false"
             app:iconSpaceReserved="false" />
 
-        <SwitchPreferenceCompat
-            android:defaultValue="false"
-            android:key="@string/start_main_player_fullscreen_key"
-            android:summary="@string/start_main_player_fullscreen_summary"
-            android:title="@string/start_main_player_fullscreen_title"
-            app:singleLineTitle="false"
-            app:iconSpaceReserved="false" />
-
         <ListPreference
             android:defaultValue="@string/autoplay_value"
             android:entries="@array/autoplay_type_description"
@@ -185,34 +125,6 @@
             android:key="@string/resume_on_audio_focus_gain_key"
             android:summary="@string/resume_on_audio_focus_gain_summary"
             android:title="@string/resume_on_audio_focus_gain_title"
-            app:singleLineTitle="false"
-            app:iconSpaceReserved="false" />
-
-        <ListPreference
-            android:defaultValue="@string/default_left_gesture_control_value"
-            android:entries="@array/left_gesture_control_description"
-            android:entryValues="@array/left_gesture_control_values"
-            android:key="@string/left_gesture_control_key"
-            android:summary="@string/left_gesture_control_summary"
-            android:title="@string/left_gesture_control_title"
-            app:singleLineTitle="false"
-            app:iconSpaceReserved="false" />
-
-        <ListPreference
-            android:defaultValue="@string/default_right_gesture_control_value"
-            android:entries="@array/right_gesture_control_description"
-            android:entryValues="@array/right_gesture_control_values"
-            android:key="@string/right_gesture_control_key"
-            android:summary="@string/right_gesture_control_summary"
-            android:title="@string/right_gesture_control_title"
-            app:singleLineTitle="false"
-            app:iconSpaceReserved="false" />
-
-        <SwitchPreferenceCompat
-            android:defaultValue="true"
-            android:key="@string/popup_remember_size_pos_key"
-            android:summary="@string/popup_remember_size_pos_summary"
-            android:title="@string/popup_remember_size_pos_title"
             app:singleLineTitle="false"
             app:iconSpaceReserved="false" />
 

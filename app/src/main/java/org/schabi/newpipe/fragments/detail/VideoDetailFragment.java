@@ -1126,11 +1126,12 @@ public final class VideoDetailFragment
             onScreenRotationButtonClicked();
         }
 
-        if (PreferenceManager.getDefaultSharedPreferences(activity)
-                .getBoolean(this.getString(R.string.use_external_video_player_key), false)) {
-            showExternalVideoPlaybackDialog();
+        // AUDIO-ONLY FORK: there is no in-app video player anymore. If the user configured an
+        // external audio player, use it; otherwise start the background (audio) player.
+        if (isExternalPlayerEnabled()) {
+            showExternalAudioPlaybackDialog();
         } else {
-            replaceQueueIfUserConfirms(this::openMainPlayer);
+            openNormalBackgroundPlayer(false);
         }
     }
 
@@ -1262,7 +1263,7 @@ public final class VideoDetailFragment
 
     private boolean isExternalPlayerEnabled() {
         return PreferenceManager.getDefaultSharedPreferences(requireContext())
-                .getBoolean(getString(R.string.use_external_video_player_key), false);
+                .getBoolean(getString(R.string.use_external_audio_player_key), false);
     }
 
     // This method overrides default behaviour when setAutoPlay() is called.
@@ -1270,7 +1271,8 @@ public final class VideoDetailFragment
     private boolean isAutoplayEnabled() {
         return autoPlayEnabled
                 && !isExternalPlayerEnabled()
-                && (!isPlayerAvailable() || player.videoPlayerSelected())
+                // AUDIO-ONLY FORK: also allow autoplay when the background (audio) player is used.
+                && (!isPlayerAvailable() || player.audioPlayerSelected())
                 && bottomSheetState != BottomSheetBehavior.STATE_HIDDEN
                 && PlayerHelper.isAutoplayAllowedByUser(requireContext());
     }

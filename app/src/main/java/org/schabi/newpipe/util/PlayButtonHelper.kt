@@ -42,7 +42,8 @@ object PlayButtonHelper {
             showHoldToAppendToastIfNeeded(activity)
         }
         playlistControlBinding.playlistCtrlPlayPopupButton.setOnClickListener {
-            NavigationHelper.playOnPopupPlayer(activity, fragment.getPlayQueue(), false)
+            // AUDIO-ONLY FORK: no popup player, use the background player instead.
+            NavigationHelper.playOnBackgroundPlayer(activity, fragment.getPlayQueue(), false)
             showHoldToAppendToastIfNeeded(activity)
         }
         playlistControlBinding.playlistCtrlPlayBgButton.setOnClickListener {
@@ -52,11 +53,11 @@ object PlayButtonHelper {
 
         // long click listener
         playlistControlBinding.playlistCtrlPlayAllButton.setOnLongClickListener {
-            NavigationHelper.enqueueOnPlayer(activity, fragment.getPlayQueue(), PlayerType.MAIN)
+            NavigationHelper.enqueueOnPlayer(activity, fragment.getPlayQueue(), PlayerType.AUDIO)
             true
         }
         playlistControlBinding.playlistCtrlPlayPopupButton.setOnLongClickListener {
-            NavigationHelper.enqueueOnPlayer(activity, fragment.getPlayQueue(), PlayerType.POPUP)
+            NavigationHelper.enqueueOnPlayer(activity, fragment.getPlayQueue(), PlayerType.AUDIO)
             true
         }
         playlistControlBinding.playlistCtrlPlayBgButton.setOnLongClickListener {
